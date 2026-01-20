@@ -5,16 +5,19 @@ This is a tool for compiler developers of LLVM. This vscode extension can suppor
 
 ## Features
 
-1. Run a clang command and explore preprocessing phase, clang AST building phase, each phase of LLVM passes, and final generated assembly code.
+1. Run a clang or rustc command and explore preprocessing phase (C/C++ only), clang AST building phase (C/C++ only), each phase of LLVM passes, and final generated assembly code.
 2. Compare difference between IRs before and after running a pass.
 3. Support custom clang or modified version.
+4. **NEW:** Support for Rust compiler (rustc) - view LLVM IR and assembly output from Rust code!
 
 ## How to use
+
+### For C/C++ (Clang)
 
 ![](./doc/step1.png)
 
 1. Click 'New config' for creating a new configuration
-2. Type your command to compile the file
+2. Type your command to compile the file (e.g., `clang -O2 main.c`)
 
 ![](./doc/step2.png)
 
@@ -22,6 +25,17 @@ This is a tool for compiler developers of LLVM. This vscode extension can suppor
 4. Now, you can explore the IRs after each pass.
 
 ![](./doc/pass-view.png)
+
+### For Rust (rustc)
+
+1. Click 'New config' for creating a new configuration
+2. Type your rustc command to compile the file, for example:
+   - `rustc main.rs --emit llvm-ir,asm -O`
+   - `rustc main.rs --emit llvm-ir,asm -C opt-level=3`
+3. Click the command name to run the command
+4. View the LLVM IR and assembly output in the pipeline view
+
+For more details on Rust support, see [RUST_SUPPORT.md](./RUST_SUPPORT.md).
 
 
 ## Compare Mode

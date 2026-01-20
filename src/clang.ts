@@ -33,6 +33,7 @@ export class Command {
         let fatbinaryNames = RegExp("(fatbinary)(\.exe)?$");
         let eraseNames = RegExp("(erase|rm)(\.exe)?$");
         let resourceNames = RegExp("(resource)(\.exe)?$");
+        let rustcNames = RegExp("(rustc)(\.exe)?$");
 
         if (clangNames.test(commands[0])) {
             // if this is cc1 command, then we can directly create it
@@ -44,6 +45,8 @@ export class Command {
             let clangCmd = new ClangCommand(commands);
             clangCmd.addSubCommands(await clangCmd.getRealCommands());
             return clangCmd;
+        } else if (rustcNames.test(commands[0])) {
+            return new RustcCommand(commands);
         } else if (lldNames.test(commands[0])) {
             return new LLDCommand(commands);
         } else if (nvccNames.test(commands[0])) {
@@ -625,6 +628,117 @@ export class ResourceCommand extends Command {
         super(commands);
         this.file = path;
     }
+}
+
+export class RustcCommand extends Command {
+    public input: string[];
+    public output?: string;
+
+    constructor(commands: string[]) {
+        // get output file
+        let outputIdx = commands.indexOf("-o");
+        let output = undefined;
+        if (outputIdx !== -1) {
+            output = commands[outputIdx + 1];
+            commands.splice(outputIdx, 2);
+        }
+
+        // get input files
+        let input: string[] = [];
+        let rsName = RegExp("\\.(rs)$");
+        for (let i = 0; i < commands.length; i++) {
+            if (rsName.test(commands[i])) {
+                input.push(commands[i]);
+                commands[i] = "";
+            }
+        }
+        commands = commands.filter((value) => { return value !== ""; });
+
+        super(commands);
+        this.output = output;
+        this.input = input;
+
+        if (output != undefined) this.bOutputToStdout = false;
+    }
+
+    public getArgs(): string[] {
+        let args = this.args;
+
+        // Add --emit flags for LLVM IR and assembly
+        // Rustc can emit multiple outputs at once
+        let emitOutputs = [];
+        if (this.bEmitLLVM) {
+            emitOutputs.push("llvm-ir");
+        }
+        if (this.bEmitASM) {
+            emitOutputs.push("asm");
+        }
+        
+        if (emitOutputs.length > 0) {
+            args = args.concat(["--emit", emitOutputs.join(",")]);
+        }
+
+        // Add codegen options for LLVM remarks
+        if (this.bPrintRemarks) {
+            args = args.concat(["-C", "llvm-args=-print-changed"]);
+        }
+
+        if (this.sFilter) {
+            args = args.concat(["-C", "llvm-args=-filter-print-funcs=" + this.sFilter]);
+        }
+
+        if (this.bOutputToStdout) {
+            args = args.concat(["-o", "-"]);
+        } else {
+            if (this.output === undefined && this.input.length > 0) {
+                this.output = this.input[0] + ".s";
+            }
+            if (this.output) {
+                args = args.concat(["-o", this.output]);
+            }
+        }
+
+        if (this.input.length > 0) {
+            args = args.concat(this.input);
+        }
+
+        return args;
+    }
+
+    public getInputPath(): string | undefined {
+        if (this.input.length > 0) {
+            return this.input[0];
+        }
+        return undefined;
+    }
+
+    public getOutputPath(): string | undefined {
+        if (this.bOutputToStdout) return '-';
+        return this.output;
+    }
+
+    public isInputFromStdin(): boolean {
+        return this.input.length === 0;
+    }
+
+    public isOutputToStdout(): boolean {
+        return this.bOutputToStdout || this.output === undefined;
+    }
+
+    public setFilter(filter: string) { 
+        this.sFilter = filter; 
+    }
+
+    public getType(): string {
+        return "RustcCommand";
+    }
+
+    // Configurable options for Rust
+    public bOutputToStdout = true;
+    public bEmitLLVM = true;
+    public bEmitASM = true;
+    public sFilter?: string;
+    public bPrintRemarks = true;
 }
 
 export class NVCCCommand extends Command {
