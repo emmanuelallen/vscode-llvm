@@ -221,7 +221,7 @@ export class ClangCommand extends Command {
         super(commands);
         this.output = output;
         this.input = input;
-        
+
         if (mode) { this.mode = mode; }
         if (output != undefined) this.bOutputToStdout = false;
     }
@@ -267,7 +267,7 @@ export class ClangCommand extends Command {
         }
 
         if (this.bSaveTemps && args.indexOf('-save-temps') === -1) {
-                    args = args.concat(["-save-temps=obj"]);
+            args = args.concat(["-save-temps=obj"]);
         }
 
         if (this.sFilter) {
@@ -293,7 +293,7 @@ export class ClangCommand extends Command {
         if (this.bOutputToStdout)
             args = args.concat(["-o", "-"]);
         else {
-            if (this.output === undefined) 
+            if (this.output === undefined)
                 this.output = this.input[0] + ".s";
             args = args.concat(["-o", this.output]);
         }
@@ -564,7 +564,7 @@ export class CUDAFECommand extends Command {
 }
 
 export class NVLinkCommand extends Command {
-    
+
 
 }
 
@@ -582,7 +582,7 @@ export class FatbinaryCommand extends Command {
             output = commands[idx].substring(19);
             commands.splice(idx, 1);
         }
-        
+
         // get input files
         let input: string[] = [];
         let obj = RegExp("\\.(cubin|ptx)$");
@@ -616,14 +616,14 @@ export class ResourceCommand extends Command {
     public file: string;
 
     constructor(commands: string[]) {
-        let path = commands[commands.indexOf('file')+1];
-        path = path.substring(0, path.length-1);
+        let path = commands[commands.indexOf('file') + 1];
+        path = path.substring(0, path.length - 1);
         commands.splice(commands.indexOf('file'), 2);
 
         // remove the []
         commands[1] = commands[1].substring(1);
-        let last = commands[commands.length-1];
-        commands[commands.length-1] = last.substring(0, last.length-1);
+        let last = commands[commands.length - 1];
+        commands[commands.length - 1] = last.substring(0, last.length - 1);
 
         super(commands);
         this.file = path;
@@ -652,13 +652,17 @@ export class RustcCommand extends Command {
                 commands[i] = "";
             }
         }
+        if (output === undefined) {
+            let index = input[0].lastIndexOf('.');
+            let basePath = input[0].substring(0, index);
+            output = basePath;
+        }
         commands = commands.filter((value) => { return value !== ""; });
 
         super(commands);
         this.output = output;
         this.input = input;
-
-        if (output != undefined) this.bOutputToStdout = false;
+        this.bOutputToStdout = false;
     }
 
     public getArgs(): string[] {
@@ -673,7 +677,7 @@ export class RustcCommand extends Command {
         if (this.bEmitASM) {
             emitOutputs.push("asm");
         }
-        
+
         if (emitOutputs.length > 0) {
             args = args.concat(["--emit", emitOutputs.join(",")]);
         }
@@ -725,8 +729,8 @@ export class RustcCommand extends Command {
         return this.bOutputToStdout || this.output === undefined;
     }
 
-    public setFilter(filter: string) { 
-        this.sFilter = filter; 
+    public setFilter(filter: string) {
+        this.sFilter = filter;
     }
 
     public getType(): string {
@@ -775,7 +779,7 @@ export class NVCCCommand extends Command {
         }
         return results;
     }
-    
+
 }
 
 
