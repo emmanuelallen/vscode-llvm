@@ -679,7 +679,22 @@ export class RustcCommand extends Command {
         }
 
         if (emitOutputs.length > 0) {
-            args = args.concat(["--emit", emitOutputs.join(",")]);
+            emitOutputs.push("link");
+            let emitIdx = args.indexOf("--emit");
+            if (emitIdx === -1) {
+                // No --emit flag exists, add it
+                args = args.concat(["--emit", emitOutputs.join(",")]);
+            } else {
+                // --emit flag exists, append to existing values
+                let existingEmit = args[emitIdx + 1];
+                let existingOutputs = existingEmit.split(",");
+                for (let output of emitOutputs) {
+                    if (existingOutputs.indexOf(output) === -1) {
+                        existingOutputs.push(output);
+                    }
+                }
+                args[emitIdx + 1] = existingOutputs.join(",");
+            }
         }
 
         // Add codegen options for LLVM remarks
