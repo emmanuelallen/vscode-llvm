@@ -286,6 +286,7 @@ export class DocumentWatcher {
 
 export class Core {
     public watcher?: DocumentWatcher;
+    public contentProvider?: PipelineContentProvider;
     private pipelines: Map<string, Pipeline> = new Map();
     public active?: Pipeline;
     private provider?: LLVMPipelineTreeDataProvider;
@@ -308,7 +309,6 @@ export class Core {
         this.pipelines.set(cmd, pipeline);
         this.active = pipeline;
         await this.runWithProgress(this.active);
-        this.provider?.refresh();
     }
 
     // This method is called when a command is selected from the command palette
@@ -351,6 +351,20 @@ export class Core {
             progress.report({ increment: 0 });
             if (pipeline) {await pipeline.run();}
             progress.report({ increment: 100 });
+            this.provider?.refresh();
+            this.notifyDocumentChanges(pipeline);
+        });
+    }
+
+    private notifyDocumentChanges(pipeline: Pipeline) {
+        if (!this.contentProvider || !this.watcher) return;
+        
+        // Notify all open documents for this pipeline that content has changed
+        this.watcher['openURIs'].forEach((uri: vscode.Uri) => {
+            let { pipeline: uriPipeline } = splitURI(uri);
+            if (uriPipeline === pipeline.raw_command) {
+                this.contentProvider!.notifyChange(uri);
+            }
         });
     }
 
@@ -366,6 +380,7 @@ export class PipelineContentProvider implements vscode.TextDocumentContentProvid
     constructor(private core: Core, subscriptions: vscode.Disposable[]) {
         subscriptions.push(vscode.workspace.registerTextDocumentContentProvider(
             PipelineContentProvider.scheme, this));
+        core.contentProvider = this;
     }
 
     public static readonly scheme = 'vscode-llvm';
@@ -412,5 +427,11 @@ export class PipelineContentProvider implements vscode.TextDocumentContentProvid
     private _onDidChange = new vscode.EventEmitter<vscode.Uri>();
     get onDidChange(): vscode.Event<vscode.Uri> {
         return this._onDidChange.event;
+    }
+
+    public notifyChange(uri: vscode.Uri) {
+        // Clear cached document so it gets regenerated with new content
+        this._documents.delete(uri.path);
+        this._onDidChange.fire(uri);
     }
 }
